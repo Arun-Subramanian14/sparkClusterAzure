@@ -47,7 +47,7 @@ continent_udf=udf(get_continent_name,StringType())
 df = df.withColumn('continent', continent_udf(df['country']))
 df.show(5)
 
-#VISUALISATION
+#VISUALISATION 1
 df.createGlobalTempView("japan_visa")
 df_cont=spark.sql("""
     SELECT year,continent, sum(Number_of_issued_numerical) visa_issued
@@ -66,6 +66,25 @@ fig.update_layout( title_text='Number of visa issued in Japan by continent betwe
 fig.write_html('outputs/visa_number_in_japan_continent.html')
 # fig.write_parquet('output/visa_number_in_japan_continent.parquet')
 
+
+#VISUALISATION 2
+df_cont1=spark.sql("""
+    SELECT year,country, sum(Number_of_issued_numerical) visa_issued
+    from global_temp.japan_visa
+    where country not in ('total','others')
+    and country is not null
+    group by year, country
+    order by year
+""")
+df_cont1=df_cont1.toPandas()
+
+fig=px.choropleth(df_cont1,locations='country',color='visa_issued',hover_name='country', animation_frame='year'
+                  ,range_color=[100000,100000],color_continuous_scale=px.colors.sequential.Plasma,
+                  locationmode='country names',
+                  title='Yearly visa issued by countries')
+
+fig.write_html('outputs/visa_number_in_japan_year_map_country_wise.html')
+df.write.csv('outputs/visa_number_in_japan_cleaned.csv', header=True,mode='overwrite')
 
 spark.stop()
 
